@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <link rel="icon" href="./logo/ssr_logo.jpg">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>JLPTSHIKEN | 読解</title>
+  <link rel="stylesheet" href="./style/dStyle.css">
+</head>
+<body data-level="N3">
+  <header>
+    <div class="header">
+      <h1 class="test-title">JLPTSHIKEN： 読解</h1>
+      <div class="header-actions">
+        <nav class="nav-links">
+          <a class="pill-link" href="index.html">ホーム</a>
+          <a class="pill-link" href="mypage.html">My Page</a>
+        </nav>
+        <button id="toggle-theme">☀️</button>
+      </div>
+    </div>
+  </header>
+  <!-- Меню настроек перед началом теста -->
+<div id="configModal" class="modal">
+  <div class="modal-content">
+    <h2>テストの設定</h2>
+    <label>
+      問題数を選択:
+      <select id="questionCount">
+        <option value="3">3枚</option>
+        <option value="5">5枚</option>
+        <option value="8">8枚</option>
+        <option value="12">12枚</option>
+        <option value="15" selected>すべて（15枚）</option>
+      </select>
+    </label>
+    <label>
+      時間を選択:
+      <select id="testTime">
+        <option value="300">5分</option>
+        <option value="900">15分</option>
+        <option value="1800">30分</option>
+        <option value="3600" selected>60分</option>
+      </select>
+    </label>
+    <button id="startBtn">テストを開始</button>
+    <button id="cancelBtn">キャンセル</button>
+  </div>
+</div>
+
+  <div class="test-container" id="testContainer">
+    <!-- Динамически создается контент -->
+  </div>
+  
+  <div class="bottom-bar">
+    <div class="timer" id="timer">⏱ 00:00</div> <!--残り時間:-->
+    <div class="controls-inline">
+      <button id="backToMenuBtn" class="secondary">戻る</button>
+      <button class="finish-button" id="finishBtn">完了</button>
+    </div>
+  </div>
+
+  <!-- Custom Confirm Modal -->
+  <div id="customConfirm" class="modal" style="display: none;">
+    <div class="modal-content confirm-content">
+      <p id="confirmMessage">確認メッセージ</p>
+      <div class="confirm-buttons">
+        <button id="confirmYes">はい</button>
+        <button id="confirmNo">いいえ</button>
+      </div>
+    </div>
+  </div>
+
+
+  <script src="./js/dokkai_script.js"></script>
+</body>
+</html>
