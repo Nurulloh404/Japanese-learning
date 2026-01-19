@@ -17,6 +17,7 @@
     <button id="toggle-theme" style="margin-left: auto; margin-right: 20px; padding: 8px 12px; border: none; border-radius: 5px; cursor: pointer;">☀️</button> <!--☼-->
   </div>
   <div class="bottom-bar">
+    <span id="timer">⏱ 00:00</span> <!--残り時間:-->
     <button id="stop_test">完了</button>
     <button id="back_button">戻る</button>
   </div>
@@ -35,6 +36,9 @@
     <h3>テストの設定</h3>
     <label>問題の数:
       <input type="number" id="question-count" min="1" max="200" value="20" />
+    </label><br><br>
+    <label>制限時間（分）:
+      <input type="number" id="time-limit" min="1" max="180" value="60" />
     </label><br><br>
     <button id="start-test-btn">開始</button>
     <button id="cancel-test-btn">戻る</button>

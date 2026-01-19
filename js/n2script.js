@@ -1,4 +1,6 @@
 let questions = [];
+let timer;
+let timeLeft = 3600;
 let userAnswers = [];
 let subject = null;
 
@@ -34,11 +36,15 @@ document.addEventListener('DOMContentLoaded', () => {
 // Начало теста
 document.getElementById("start-test-btn").addEventListener("click", () => {
   const count = parseInt(document.getElementById("question-count").value) || 20;
+  const time = parseInt(document.getElementById("time-limit").value) || 60;
+  timeLeft = time * 60;
+
   fetch('./json/n2questions.json')
     .then(res => res.json())
     .then(data => {
       questions = shuffleArray(data[subject] || []).slice(0, count);
       displayQuestions();
+      startTimer();
       document.getElementById("start-settings-modal").style.display = "none";
     });
 });
@@ -76,6 +82,19 @@ function displayQuestions() {
 }
 
 // Таймер
+function startTimer() {
+  const timerElem = document.getElementById("timer");
+  timer = setInterval(() => {
+    const minutes = String(Math.floor(timeLeft / 60)).padStart(2, '0');
+    const seconds = String(timeLeft % 60).padStart(2, '0');
+    timerElem.textContent = `⏱ ${minutes}:${seconds}`;
+    if (--timeLeft < 0) {
+      clearInterval(timer);
+      submitTest();
+    }
+  }, 1000);
+}
+
 // Перемешивание
 function shuffleArray(arr) {
   return arr.sort(() => Math.random() - 0.5);
@@ -115,6 +134,7 @@ document.getElementById("cancel-test-btn").addEventListener("click", () => {
 
 // Проверка
 function submitTest() {
+  clearInterval(timer);
   const allQuestions = document.querySelectorAll('.question');
   let correctCount = 0;
   userAnswers = [];
