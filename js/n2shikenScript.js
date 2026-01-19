@@ -5,7 +5,6 @@ let currentBlockIndex = 0;
 let timeLeft = 0;
 let timer;
 let startTime;
-let hasSubmitted = false;
 
 // --- ТЕМА: сохранение и переключение ---
 const themeToggle = document.getElementById("themeToggle");
@@ -43,14 +42,12 @@ async function startTest() {
   const name = usernameInput.value.trim();
   if (!name) return alert("名前を入力してください！");
   user.name = name;
-  hasSubmitted = false;
 
   document.getElementById("user-form").classList.add("hidden");
   document.getElementById("test-section").classList.remove("hidden");
-  document.getElementById("footer-actions").classList.remove("hidden");
 
   await loadQuestions();
-  blockKeys = Object.keys(questionsData).slice(0, 1); // 2-блокни o‘chirib, faqat birinchi blok
+  blockKeys = Object.keys(questionsData); // Получаем список блоков
   currentBlockIndex = 0;
   user.blocks = [];
 
@@ -70,9 +67,9 @@ function loadBlock(blockKey) {
   const blockTime = questionsData[blockKey].time ?? 300; // Установка времени (по умолч. 5 мин)
   startTimer(blockTime);
 
-  // Single block => всегда 完了
+  // Кнопка 次へ / 完了
   const finishBtn = document.querySelector("button[onclick='confirmSubmit()']");
-  finishBtn.textContent = "完了";
+  finishBtn.textContent = currentBlockIndex < blockKeys.length - 1 ? "次へ" : "完了";
 }
 
 // --- ТАЙМЕР БЛОКА ---
@@ -146,8 +143,8 @@ function renderAllQuestions(blockKey) {
 
 // --- УНИВЕРСАЛЬНАЯ КНОПКА: 次へ / 完了 ---
 async function confirmSubmit() {
-  if (hasSubmitted) return;
-  const confirmText = "テストを終了しますか？";
+  const isLastBlock = currentBlockIndex >= blockKeys.length - 1;
+  const confirmText = isLastBlock ? "テストを終了しますか？" : "次のブロックへ進みますか？";
   if (await showConfirm(confirmText)) {
     clearInterval(timer);
     handleNext();
@@ -156,24 +153,14 @@ async function confirmSubmit() {
 
 // --- ПЕРЕХОД К СЛЕДУЮЩЕМУ БЛОКУ ИЛИ РЕЗУЛЬТАТЫ ---
 function handleNext() {
-  if (hasSubmitted) return;
   const blockKey = blockKeys[currentBlockIndex];
   const inputs = document.querySelectorAll("input[type=radio]:checked");
   let blockScore = 0;
 
-  const allOptions = document.querySelectorAll("input[type=radio]");
-  allOptions.forEach(input => {
-    const label = input.parentElement;
-    label.classList.remove('correct', 'incorrect', 'correct-answer');
-    const isCorrect = input.value === input.dataset.answer;
-    if (isCorrect) label.classList.add('correct-answer');
-    if (input.checked && isCorrect) {
+  inputs.forEach(input => {
+    if (input.value === input.dataset.answer) {
       blockScore += parseFloat(input.dataset.points);
-      label.classList.add('correct');
-    } else if (input.checked && !isCorrect) {
-      label.classList.add('incorrect');
     }
-    input.disabled = true;
   });
 
   const timeSpent = Math.floor((Date.now() - startTime) / 1000);
@@ -187,15 +174,17 @@ function handleNext() {
   user.score += blockScore;
   currentBlockIndex++;
 
-  hasSubmitted = true;
-  showResults();
+  if (currentBlockIndex < blockKeys.length) {
+    loadBlock(blockKeys[currentBlockIndex]);
+  } else {
+    showResults();
+  }
 }
 
 // --- ВЫВОД ИТОГОВ ВСЕХ БЛОКОВ ---
 function showResults() {
   document.getElementById("test-section").classList.add("hidden");
   document.getElementById("result-section").classList.remove("hidden");
-  document.getElementById("footer-actions").classList.add("hidden");
 
   const resultElem = document.getElementById("score-result");
   let html = `<h3>${user.name}さん、テスト結果:</h3><ul>`;
@@ -227,7 +216,9 @@ async function goToMainMenu() {
 
 // --- ВОЗВРАТ В НАЧАЛО ---
 async function confirmExit() {
-  if (hasSubmitted || await showConfirm("メニューに戻りますか？")) location.reload();
+  if (await showConfirm("レジストリ メニューに戻りますか?")) {
+    location.reload();
+  }
 }
 
 // --- СТАНДАРТНОЕ ОКНО ПОДТВЕРЖДЕНИЯ ---
@@ -237,14 +228,20 @@ function showConfirm(text) {
     if (!modal) {
       modal = document.createElement("div");
       modal.id = "confirm-modal";
-      modal.className = "modal-overlay";
+      modal.style.position = "fixed";
+      modal.style.top = "0";
+      modal.style.left = "0";
+      modal.style.right = "0";
+      modal.style.bottom = "0";
+      modal.style.background = "rgba(0,0,0,0.6)";
+      modal.style.display = "flex";
+      modal.style.justifyContent = "center";
+      modal.style.alignItems = "center";
       modal.innerHTML = `
-        <div class="modal-content">
-          <p id="confirm-text" style="margin-bottom: 12px;"></p>
-          <div class="button-row" style="justify-content:center; margin-top: 10px;">
-            <button id="confirm-yes">はい</button>
-            <button id="confirm-no" class="ghost">いいえ</button>
-          </div>
+        <div style="background: white; padding: 20px; border-radius: 10px; max-width: 300px; text-align: center;">
+          <p id="confirm-text" style="margin-bottom: 15px;"></p>
+          <button id="confirm-yes">はい</button>
+          <button id="confirm-no" style="margin-left: 10px;">いいえ</button>
         </div>`;
       document.body.appendChild(modal);
     }
@@ -258,6 +255,6 @@ function showConfirm(text) {
 // --- СОХРАНЕНИЕ РЕЗУЛЬТАТА ---
 function saveResult() {
   const history = JSON.parse(localStorage.getItem("results") || "[]");
-  history.unshift({ name: user.name, score: user.score, blocks: user.blocks, date: new Date().toISOString() });
-  localStorage.setItem("results", JSON.stringify(history.slice(0, 50)));
+  history.push({ name: user.name, score: user.score, blocks: user.blocks, date: new Date().toISOString() });
+  localStorage.setItem("results", JSON.stringify(history));
 }

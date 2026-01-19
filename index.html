@@ -3,87 +3,42 @@
 <head>
     <meta charset="UTF-8">
     <link rel="icon" href="./logo/ssr_logo.jpg">
-    <link rel="apple-touch-icon" href="./logo/icon-192.png">
-    <link rel="manifest" href="./manifest.webmanifest">
-    <meta name="theme-color" content="#0f766e">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>JLPTSHIKEN | Home</title>
-<link rel="stylesheet" href="./style/style.css"/>
+    <title>日本語の期末試験</title>
+    <link rel="stylesheet" href="./style/style.css"/>
 </head>
 <body>
-  <header>
+    <script src="./js/script.js"></script>
     <div class="header">
-      <div>
-        <span class="eyebrow">JLPTSHIKEN</span>
-        <h1 class="test-title">Mobil tayyorlov uchun JLPTSHIKEN</h1>
-      </div>
-      <div class="header-actions">
-        <nav class="nav-links">
-          <a class="pill-link" href="#n2-track">N2</a>
-          <a class="pill-link" href="#n3-track">N3</a>
-          <a class="pill-link" href="mypage.html">My Page</a>
-        </nav>
-        <button id="toggle-theme">☀️</button>
-      </div>
-    </div>
-  </header>
+      <h1>日本語オンラインテスト</h1>
+      <button id="toggle-theme" style="margin-left: auto; margin-right: 20px; padding: 8px 12px; border: none; border-radius: 5px; cursor: pointer;">☀️</button> <!--☼-->
+  </div>
+  <div class="choice_container">
+  <form id="start-form"></form>
+      <label id="label_choice" ><p><h3>トピックを選択してください:</h3></p>
+        <select id="select_choice" onchange="window.location.href=this.value;" style="width: 100%; padding: 10px; margin-bottom: 15px;" >
+          <!-- <option class="choice_option1" value="">⊶ トピックを選択 ⊷</option> -->
+          <option class="choice_option1" value="">⊶ N3レベル ⊷</option>
+          <option class="choice_option2" value='goi.html?subject=文字・語彙'>文字・語彙テスト</option>
+          <option class="choice_option1" value='bunpou.html?subject=文法'>文法テスト</option>
+          <option class="choice_option2" value='hoshi_mondai.html?subject=星問題'>星問題テスト</option>
+          <option class="choice_option1" value="dokkai.html">読解テスト</option>
+          <option class="choice_option2" value="shikenIndex.html">試験テスト</option>
+          <!-- <option value='dokkai.html?subject=読解' style="background-color: rgb(209, 209, 209);">読解テスト</option> -->
+        </select>
 
-  <main class="landing">
-    <section class="hero">
-      <span class="eyebrow">Mobilga mos</span>
-      <h1>JLPTSHIKEN bilan minimal, dinamik tayyorlov</h1>
-      <p>Natijalaringizni kuzating, to'g'ri javoblarni darhol ko'ring va My Page-da barcha ko'rsatkichlarni nazorat qiling.</p>
-      <div class="hero-actions">
-        <a class="btn" href="n2goi.html?subject=all">N2 tez boshlash</a>
-        <a class="btn secondary" href="mypage.html">Statistikalar</a>
-        <a class="btn ghost" href="n2shikenindex.html">N2 Full Test</a>
-      </div>
-      <div class="hero-metrics">
-        <div class="metric">
-          <strong>N3 / N2</strong>
-          <small>Har ikki daraja uchun bloklar</small>
-        </div>
-        <div class="metric">
-          <strong>リアルタイム</strong>
-          <small>To'g'ri / noto'g'ri ranglar</small>
-        </div>
-        <div class="metric">
-          <strong>My Page</strong>
-          <small>Saqlangan tarix va ko'rsatkichlar</small>
-        </div>
-      </div>
-    </section>
-
-    <section class="level-grid">
-      <article class="level-card" id="n2-track">
-        <h3>⊶ N2レベル ⊷</h3>
-        <small>Murakkab savollar va vaqt boshqaruvi</small>
-        <div class="link-list">
-          <a class="list-item" href="n2goi.html?subject=文字・語彙">文字・語彙テスト</a>
-          <a class="list-item" href="n2bunpou.html?subject=文法">文法テスト</a>
-          <a class="list-item" href="n2hoshi_mondai.html?subject=星問題">星問題テスト</a>
-          <a class="list-item" href="n2dokkai.html">読解テスト</a>
-          <a class="list-item" href="n2goi.html?subject=all">ALL 20問</a>
-          <a class="list-item" href="n2shikenindex.html">試験テスト</a>
-        </div>
-      </article>
-
-      <article class="level-card" id="n3-track">
-        <h3>⊶ N3レベル ⊷</h3>
-        <small>Asosiy tayyorgarlikni shu yerdan boshlang</small>
-        <div class="link-list">
-          <a class="list-item" href="goi.html?subject=文字・語彙">文字・語彙テスト</a>
-          <a class="list-item" href="bunpou.html?subject=文法">文法テスト</a>
-          <a class="list-item" href="hoshi_mondai.html?subject=星問題">星問題テスト</a>
-          <a class="list-item" href="dokkai.html">読解テスト</a>
-          <a class="list-item" href="goi.html?subject=all">ALL 20問</a>
-          <a class="list-item" href="shikenIndex.html">試験テスト</a>
-        </div>
-      </article>
-    </section>
-  </main>
-
+        <select id="select_choice" onchange="window.location.href=this.value;" style="width: 100%; padding: 10px; margin-bottom: 15px;" >
+          <option class="choice_option1" value="">⊶ N2レベル ⊷</option>
+          <option class="choice_option2" value='n2goi.html?subject=文字・語彙'>文字・語彙テスト</option>
+          <option class="choice_option1" value='n2bunpou.html?subject=文法'>文法テスト</option>
+          <option class="choice_option2" value='n2hoshi_mondai.html?subject=星問題'>星問題テスト</option>
+          <option class="choice_option1" value="n2dokkai.html">読解テスト</option>
+          <option class="choice_option2" value="n2shikenindex.html">試験テスト</option>
+          <!-- <option value='dokkai.html?subject=読解' style="background-color: rgb(209, 209, 209);">読解テスト</option> -->
+        </select>
+      </label>
+  </div>
+  
   <div id="dim-overlay"></div>
-  <script src="./js/script.js"></script>
 </body>
 </html>

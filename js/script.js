@@ -1,40 +1,20 @@
-const params = new URLSearchParams(window.location.search);
-const levelParam = (params.get('level') || '').toUpperCase();
-const bodyLevel = (document.body.dataset.level || '').toUpperCase();
-const LEVEL = levelParam || bodyLevel || 'N2';
-const QUESTION_FILE = LEVEL === 'N2' ? './json/n2questions.json' : './json/questions.json';
-const subject = params.get('subject') || document.body.dataset.subject || '文法';
-const SUBJECT_KEY = (subject || '').toLowerCase();
-const CORRECT_KEY = `jlptshiken_correct_${LEVEL}`;
-
 let questions = [];
-let questionPool = null;
 let timer;
 let timeLeft = 3600;
 let userAnswers = [];
-let lastConfig = { count: 20, time: 60 };
-let testStartedAt = null;
-let liveCorrect = 0;
-let liveIncorrect = 0;
-let questionStatus = [];
-let masteredSet = new Set();
+let subject = null;
 
-const startModal = document.getElementById('start-settings-modal');
-const resultBox = document.getElementById('result');
-const answersReview = document.getElementById('answers-review');
-const retakeButton = document.getElementById('retake-test');
-const postActions = document.getElementById('post-actions');
-const liveFooter = document.getElementById('live-footer');
-const liveCorrectElem = document.getElementById('live-correct');
-const liveIncorrectElem = document.getElementById('live-incorrect');
-const liveRemainingElem = document.getElementById('live-remaining');
+// URL パラメータ取得
+const params = new URLSearchParams(window.location.search);
+subject = params.get('subject') || "文法";
 
+// 初期ダイアログ設定
 window.onload = () => {
-  if (startModal) startModal.style.display = 'flex';
-  const title = document.getElementById('test-title');
-  if (title) title.textContent = `JLPTSHIKEN ${LEVEL}： ${subject}`;
+  document.getElementById("start-settings-modal").style.display = "flex";
+  document.getElementById("test-title").textContent = "日本語オンラインテスト： " + subject;
 };
 
+// テーマ切り替え
 document.addEventListener('DOMContentLoaded', () => {
   const themeButton = document.getElementById('toggle-theme');
   const savedTheme = localStorage.getItem('theme');
@@ -42,49 +22,37 @@ document.addEventListener('DOMContentLoaded', () => {
 
   if (savedTheme === 'dark' || (!savedTheme && prefersDark)) {
     document.body.classList.add('dark-mode');
-    if (themeButton) themeButton.textContent = '☀️';
+    themeButton.textContent = '☀️';
   }
 
-  themeButton?.addEventListener('click', () => {
+  themeButton.addEventListener('click', () => {
     document.body.classList.toggle('dark-mode');
     const isDark = document.body.classList.contains('dark-mode');
-    if (themeButton) themeButton.textContent = isDark ? '☀️' : '🌙';
+    themeButton.textContent = isDark ? '☀️' : '🌙';
     localStorage.setItem('theme', isDark ? 'dark' : 'light');
   });
+});
 
-  if ('serviceWorker' in navigator) {
-    navigator.serviceWorker.register('./sw.js').catch((err) => {
-      console.error('Service worker registration failed:', err);
+// Начало теста
+document.getElementById("start-test-btn").addEventListener("click", () => {
+  const count = parseInt(document.getElementById("question-count").value) || 20;
+  const time = parseInt(document.getElementById("time-limit").value) || 60;
+  timeLeft = time * 60;
+
+  fetch('./json/questions.json')
+    .then(res => res.json())
+    .then(data => {
+      questions = shuffleArray(data[subject] || []).slice(0, count);
+      displayQuestions();
+      startTimer();
+      document.getElementById("start-settings-modal").style.display = "none";
     });
-  }
 });
-
-document.getElementById('start-test-btn')?.addEventListener('click', () => {
-  const count = parseInt(document.getElementById('question-count').value, 10) || 20;
-  const time = parseInt(document.getElementById('time-limit').value, 10) || 60;
-  lastConfig = { count, time };
-  beginTest(lastConfig);
-});
-
-retakeButton?.addEventListener('click', () => {
-  if (!questionPool) {
-    if (startModal) startModal.style.display = 'flex';
-    return;
-  }
-  beginTest(lastConfig);
-});
-
-document.getElementById('view-stats-btn')?.addEventListener('click', () => {
-  window.location.href = 'mypage.html';
-});
-
-document.getElementById('questions-container')?.addEventListener('change', handleOptionSelect);
 
 // Вопросы
 function displayQuestions() {
   const container = document.getElementById("questions-container");
   container.innerHTML = '';
-  questionStatus = [];
 
   questions.forEach((q, index) => {
     const div = document.createElement('div');
@@ -113,58 +81,8 @@ function displayQuestions() {
   });
 }
 
-function formatOption(opt) {
-  if (typeof opt === 'string') return opt;
-  if (!opt) return '---';
-  if (opt.text) return opt.text;
-  if (opt.image) return '画像';
-  return '---';
-}
-
-async function beginTest(config) {
-  resetUI();
-  masteredSet = loadMastered();
-  const data = await loadQuestionPool();
-  const targetCount = (subject && subject.toLowerCase() === 'all') ? 20 : config.count;
-  const pool = buildPool(data, subject);
-  const untouched = pool.filter(q => !masteredSet.has(getQuestionId(q, subject)));
-  const primary = shuffleArray([...untouched]).slice(0, targetCount);
-  const fallback = primary.length < targetCount
-    ? shuffleArray([...pool.filter(q => !primary.includes(q))]).slice(0, targetCount - primary.length)
-    : [];
-
-  questions = [...primary, ...fallback].slice(0, targetCount);
-  timeLeft = config.time * 60;
-  testStartedAt = Date.now();
-  liveCorrect = 0;
-  liveIncorrect = 0;
-
-  displayQuestions();
-  questionStatus = Array(questions.length).fill(null);
-  updateLiveFooter();
-  startTimer();
-  if (startModal) startModal.style.display = 'none';
-  window.scrollTo({ top: 0, behavior: 'smooth' });
-}
-
-async function loadQuestionPool() {
-  if (questionPool) return questionPool;
-  const res = await fetch(QUESTION_FILE);
-  questionPool = await res.json();
-  return questionPool;
-}
-
-function resetUI() {
-  clearInterval(timer);
-  document.getElementById('questions-container').innerHTML = '';
-  resultBox.innerHTML = '';
-  answersReview.innerHTML = '';
-  postActions?.classList.add('hidden');
-  liveFooter?.classList.remove('hidden');
-}
-
+// Таймер
 function startTimer() {
-  clearInterval(timer);
   const timerElem = document.getElementById("timer");
   timer = setInterval(() => {
     const minutes = String(Math.floor(timeLeft / 60)).padStart(2, '0');
@@ -177,110 +95,63 @@ function startTimer() {
   }, 1000);
 }
 
+// Перемешивание
 function shuffleArray(arr) {
-  const copy = [...arr];
-  for (let i = copy.length - 1; i > 0; i -= 1) {
-    const j = Math.floor(Math.random() * (i + 1));
-    [copy[i], copy[j]] = [copy[j], copy[i]];
-  }
-  return copy;
-}
-
-function buildPool(data, subjectName) {
-  if (!data) return [];
-  if (subjectName && subjectName.toLowerCase() === 'all') {
-    return Object.values(data).flat();
-  }
-  const pool = data[subjectName] || data[SUBJECT_KEY] || [];
-  return Array.isArray(pool) ? pool : [];
-}
-
-function getQuestionId(question, subjectName) {
-  const base = question.id || question.question || question.image || JSON.stringify(question);
-  return `${LEVEL}-${(subjectName || SUBJECT_KEY)}` + `-${base}`;
-}
-
-function loadMastered() {
-  try {
-    const parsed = JSON.parse(localStorage.getItem(CORRECT_KEY) || '[]');
-    return new Set(parsed);
-  } catch {
-    return new Set();
-  }
-}
-
-function persistMastered() {
-  if (!questions.length) return;
-  const updated = new Set(masteredSet);
-  questions.forEach((q, idx) => {
-    if (questionStatus[idx] === 'correct') {
-      updated.add(getQuestionId(q, subject));
-    }
-  });
-  masteredSet = updated;
-  localStorage.setItem(CORRECT_KEY, JSON.stringify(Array.from(updated).slice(0, 2000)));
+  return arr.sort(() => Math.random() - 0.5);
 }
 
 // Подтверждение завершения
-const stopBtn = document.getElementById("stop_test");
-const backBtn = document.getElementById("back_button");
-const cancelBtn = document.getElementById("cancel-test-btn");
+document.getElementById("stop_test").addEventListener("click", () => {
+  document.getElementById("confirm-end-modal").style.display = "flex";
+});
 
-if (stopBtn) {
-  stopBtn.addEventListener("click", () => {
-    document.getElementById("confirm-end-modal").style.display = "flex";
-  });
+document.getElementById("confirm-end-yes").addEventListener("click", () => {
+  document.getElementById("confirm-end-modal").style.display = "none";
+  submitTest();
+});
 
-  document.getElementById("confirm-end-yes").addEventListener("click", () => {
-    document.getElementById("confirm-end-modal").style.display = "none";
-    submitTest();
-  });
+document.getElementById("confirm-end-no").addEventListener("click", () => {
+  document.getElementById("confirm-end-modal").style.display = "none";
+});
 
-  document.getElementById("confirm-end-no").addEventListener("click", () => {
-    document.getElementById("confirm-end-modal").style.display = "none";
-  });
-}
+// Подтверждение выхода
+document.getElementById("back_button").addEventListener("click", () => {
+  document.getElementById("confirm-exit-modal").style.display = "flex";
+});
 
-if (backBtn) {
-  backBtn.addEventListener("click", () => {
-    document.getElementById("confirm-exit-modal").style.display = "flex";
-  });
+document.getElementById("confirm-exit-yes").addEventListener("click", () => {
+  window.location.href = 'index.html';
+});
 
-  document.getElementById("confirm-exit-yes").addEventListener("click", () => {
-    window.location.href = 'index.html';
-  });
+document.getElementById("confirm-exit-no").addEventListener("click", () => {
+  document.getElementById("confirm-exit-modal").style.display = "none";
+});
 
-  document.getElementById("confirm-exit-no").addEventListener("click", () => {
-    document.getElementById("confirm-exit-modal").style.display = "none";
-  });
-}
-
-if (cancelBtn) {
-  cancelBtn.addEventListener("click", () => {
-    window.location.href = "index.html";
-  });
-}
+// ✅ Кнопка キャンセル (отмена теста)
+document.getElementById("cancel-test-btn").addEventListener("click", () => {
+  window.location.href = "index.html";
+});
 
 // Проверка
 function submitTest() {
   clearInterval(timer);
   const allQuestions = document.querySelectorAll('.question');
-  let correctCount = questionStatus.filter(status => status === 'correct').length;
+  let correctCount = 0;
   userAnswers = [];
 
   questions.forEach((q, i) => {
     const selected = document.querySelector(`input[name="q${i}"]:checked`);
-    const selectedIndex = selected ? parseInt(selected.value, 10) : -1;
+    const selectedIndex = selected ? parseInt(selected.value) : -1;
     userAnswers.push(selectedIndex);
 
     const options = allQuestions[i].querySelectorAll('input[type=radio]');
     options.forEach(opt => {
-      const optIndex = parseInt(opt.value, 10);
+      const optIndex = parseInt(opt.value);
       const label = opt.parentElement;
 
-      if (opt.checked) label.classList.add('selected-choice');
       if (optIndex === q.answer) label.classList.add('correct-answer');
       if (opt.checked && optIndex === q.answer) {
+        correctCount++;
         label.classList.add('correct');
       } else if (opt.checked && optIndex !== q.answer) {
         label.classList.add('incorrect');
@@ -290,132 +161,7 @@ function submitTest() {
     });
   });
 
-  const durationSec = getDurationSeconds();
-  const accuracy = questions.length ? Math.round((correctCount / questions.length) * 100) : 0;
-  persistMastered();
-  resultBox.innerHTML = '';
-  answersReview.innerHTML = '';
-  saveResult(correctCount, accuracy, durationSec);
-  postActions?.classList.remove('hidden');
-  liveFooter?.classList.add('hidden');
-}
-
-function renderAnswerReview() {
-  answersReview.innerHTML = '';
-  questions.forEach((q, index) => {
-    const userChoice = userAnswers[index];
-    const card = document.createElement('div');
-    card.className = 'answer-card';
-    const isCorrect = userChoice === q.answer;
-
-    card.innerHTML = `
-      <div class="answer-card__header">
-        <h4>${index + 1}. ${q.question}</h4>
-        <span class="pill ${isCorrect ? 'pill--success' : 'pill--danger'}">${isCorrect ? '正解' : '間違い'}</span>
-      </div>
-      <p class="answer-meta">正解: ${formatOption(q.options[q.answer])}</p>
-      <p class="answer-meta ${isCorrect ? 'text-success' : 'text-danger'}">
-        あなた: ${userChoice >= 0 ? formatOption(q.options[userChoice]) : '未選択'}
-      </p>
-    `;
-
-    answersReview.appendChild(card);
-  });
-}
-
-function renderResultSummary(correctCount, accuracy, durationSec) {
-  const result = document.createElement('div');
-  result.className = 'result-summary';
-  result.innerHTML = `
-    <div class="score-badge">${correctCount}<span>/ ${questions.length}</span></div>
-    <div class="result-meta">
-      <div>
-        <p class="muted">正解率</p>
-        <p class="result-strong">${accuracy}%</p>
-      </div>
-      <div>
-        <p class="muted">所要時間</p>
-        <p class="result-strong">${formatDuration(durationSec)}</p>
-      </div>
-    </div>
-  `;
-  resultBox.innerHTML = '';
-  resultBox.appendChild(result);
-}
-
-function getDurationSeconds() {
-  if (!testStartedAt) return 0;
-  const elapsed = Math.floor((Date.now() - testStartedAt) / 1000);
-  return Math.min(elapsed, (lastConfig.time || 0) * 60);
-}
-
-function formatDuration(totalSeconds) {
-  const minutes = Math.floor(totalSeconds / 60);
-  const seconds = totalSeconds % 60;
-  return `${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
-}
-
-function saveResult(correctCount, accuracy, durationSec) {
-  const payload = {
-    id: (crypto.randomUUID ? crypto.randomUUID() : `result-${Date.now()}`),
-    level: LEVEL,
-    subject,
-    correct: correctCount,
-    total: questions.length,
-    accuracy,
-    durationSec,
-    timeLimitSec: (lastConfig.time || 0) * 60,
-    startedAt: testStartedAt ? new Date(testStartedAt).toISOString() : null,
-    finishedAt: new Date().toISOString(),
-    page: window.location.pathname.split('/').pop()
-  };
-
-  const existing = JSON.parse(localStorage.getItem('quizResults') || '[]');
-  existing.unshift(payload);
-  const trimmed = existing.slice(0, 50); // limit storage growth
-  localStorage.setItem('quizResults', JSON.stringify(trimmed));
-}
-
-function handleOptionSelect(event) {
-  const target = event.target;
-  if (!target.matches('input[type="radio"][name^="q"]')) return;
-  const name = target.name;
-  const qIndex = parseInt(name.replace('q', ''), 10);
-  if (Number.isNaN(qIndex) || questionStatus[qIndex]) return;
-
-  const selectedIndex = parseInt(target.value, 10);
-  const q = questions[qIndex];
-  if (!q) return;
-
-  const questionEl = document.querySelectorAll('.question')[qIndex];
-  const options = questionEl.querySelectorAll('input[type=radio]');
-  const isCorrect = selectedIndex === q.answer;
-
-  questionStatus[qIndex] = isCorrect ? 'correct' : 'incorrect';
-  if (isCorrect) liveCorrect++; else liveIncorrect++;
-  if (isCorrect) {
-    masteredSet.add(getQuestionId(q, subject));
-    localStorage.setItem(CORRECT_KEY, JSON.stringify(Array.from(masteredSet).slice(0, 2000)));
-  }
-  updateLiveFooter();
-
-  options.forEach(opt => {
-    const optIndex = parseInt(opt.value, 10);
-    const label = opt.parentElement;
-    label.classList.remove('selected-choice', 'correct', 'incorrect');
-    if (optIndex === q.answer) label.classList.add('correct-answer');
-    if (opt.checked && optIndex === q.answer) {
-      label.classList.add('correct');
-    } else if (opt.checked && optIndex !== q.answer) {
-      label.classList.add('incorrect');
-    }
-    opt.disabled = true;
-  });
-}
-
-function updateLiveFooter() {
-  const remaining = questions.length - (liveCorrect + liveIncorrect);
-  if (liveCorrectElem) liveCorrectElem.textContent = liveCorrect;
-  if (liveIncorrectElem) liveIncorrectElem.textContent = liveIncorrect;
-  if (liveRemainingElem) liveRemainingElem.textContent = remaining;
+  const result = document.createElement('p');
+  result.innerHTML = `<strong>正解: ${questions.length} 点中 ${correctCount}点</strong>`;
+  document.getElementById("questions-container").appendChild(result);
 }
